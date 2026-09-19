@@ -1,0 +1,80 @@
+Timing is on.
+=== Lab 04 / READ SCALING: which node serves the read? ===
+ is_replica | server_addr | server_port 
+------------+-------------+-------------
+ t          |             |            
+(1 row)
+
+Time: 1.587 ms
+=== Lab 04 / READ SCALING: same query the list endpoint runs ===
+   id    |   status   | total_amount |          created_at           
+---------+------------+--------------+-------------------------------
+ 9000002 | NEW        |       777.00 | 2026-09-16 21:01:20.654185+00
+ 9000001 | NEW        |      1234.56 | 2026-09-16 20:44:30.124362+00
+ 7913212 | DELIVERED  |      9634.53 | 2026-09-10 14:52:06.715385+00
+ 7403304 | PAID       |      1801.61 | 2026-09-10 14:52:05.868201+00
+ 7371336 | PROCESSING |      6489.59 | 2026-09-10 14:52:03.798835+00
+ 6495679 | PAID       |      8384.66 | 2026-09-10 14:52:01.914581+00
+ 7151308 | PAID       |      4656.86 | 2026-09-10 14:51:53.135589+00
+ 5798046 | PAID       |      9766.90 | 2026-09-10 14:51:52.557309+00
+ 7548360 | NEW        |      6056.72 | 2026-09-10 14:51:39.313818+00
+ 7307601 | PROCESSING |      4345.29 | 2026-09-10 14:51:37.648949+00
+ 8468053 | PAID       |      4399.16 | 2026-09-10 14:51:22.442142+00
+ 8480747 | PAID       |      1117.79 | 2026-09-10 14:51:17.512073+00
+ 7023108 | DELIVERED  |      1932.99 | 2026-09-10 14:51:01.344695+00
+ 6860022 | DELIVERED  |      2441.87 | 2026-09-10 14:51:00.175662+00
+ 8128279 | PAID       |      2053.28 | 2026-09-10 14:50:59.81542+00
+ 7884832 | PROCESSING |      4362.33 | 2026-09-10 14:50:55.691985+00
+ 7752388 | PAID       |      8557.90 | 2026-09-10 14:50:34.014283+00
+ 6496862 | PAID       |      8810.32 | 2026-09-10 14:50:30.38927+00
+ 7344820 | PROCESSING |      9113.82 | 2026-09-10 14:50:23.811363+00
+ 7966281 | CANCELLED  |      6348.50 | 2026-09-10 14:50:22.03346+00
+(20 rows)
+
+Time: 89.116 ms
+=== Lab 04 / READ SCALING: plan for that query ===
+                                                                                        QUERY PLAN                                                                                        
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=7.70..9.12 rows=20 width=30) (actual time=0.075..0.098 rows=20 loops=1)
+   Buffers: shared hit=25
+   ->  Append  (cost=7.70..355115.60 rows=5006150 width=30) (actual time=0.073..0.094 rows=20 loops=1)
+         Buffers: shared hit=25
+         ->  Index Scan Backward using shop_order_2026_12_created_at_idx on shop_order_2026_12 o_28  (cost=0.15..50.30 rows=410 width=90) (actual time=0.018..0.018 rows=0 loops=1)
+               Buffers: shared hit=1
+         ->  Index Scan Backward using shop_order_2026_11_created_at_idx on shop_order_2026_11 o_27  (cost=0.15..50.30 rows=410 width=90) (actual time=0.013..0.013 rows=0 loops=1)
+               Buffers: shared hit=1
+         ->  Index Scan Backward using shop_order_2026_10_created_at_idx on shop_order_2026_10 o_26  (cost=0.15..50.30 rows=410 width=90) (actual time=0.013..0.013 rows=0 loops=1)
+               Buffers: shared hit=1
+         ->  Index Scan Backward using shop_order_2026_09_created_at_idx on shop_order_2026_09 o_25  (cost=0.42..8658.19 rows=131318 width=30) (actual time=0.028..0.045 rows=20 loops=1)
+               Buffers: shared hit=22
+         ->  Index Scan Backward using shop_order_2026_08_created_at_idx on shop_order_2026_08 o_24  (cost=0.42..28007.05 rows=425280 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_07_created_at_idx on shop_order_2026_07 o_23  (cost=0.42..28011.50 rows=425274 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_06_created_at_idx on shop_order_2026_06 o_22  (cost=0.42..27017.51 rows=410225 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_05_created_at_idx on shop_order_2026_05 o_21  (cost=0.42..27969.24 rows=424588 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_04_created_at_idx on shop_order_2026_04 o_20  (cost=0.42..27073.37 rows=411072 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_03_created_at_idx on shop_order_2026_03 o_19  (cost=0.42..27970.56 rows=424676 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_02_created_at_idx on shop_order_2026_02 o_18  (cost=0.42..25209.26 rows=382723 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2026_01_created_at_idx on shop_order_2026_01 o_17  (cost=0.42..27950.34 rows=424425 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2025_12_created_at_idx on shop_order_2025_12 o_16  (cost=0.42..27969.62 rows=424617 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2025_11_created_at_idx on shop_order_2025_11 o_15  (cost=0.42..27080.15 rows=411213 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2025_10_created_at_idx on shop_order_2025_10 o_14  (cost=0.42..28016.63 rows=425347 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2025_09_created_at_idx on shop_order_2025_09 o_13  (cost=0.42..18396.99 rows=279242 width=30) (never executed)
+         ->  Index Scan Backward using shop_order_2025_08_created_at_idx on shop_order_2025_08 o_12  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_07_created_at_idx on shop_order_2025_07 o_11  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_06_created_at_idx on shop_order_2025_06 o_10  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_05_created_at_idx on shop_order_2025_05 o_9  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_04_created_at_idx on shop_order_2025_04 o_8  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_03_created_at_idx on shop_order_2025_03 o_7  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_02_created_at_idx on shop_order_2025_02 o_6  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2025_01_created_at_idx on shop_order_2025_01 o_5  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2024_12_created_at_idx on shop_order_2024_12 o_4  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2024_11_created_at_idx on shop_order_2024_11 o_3  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2024_10_created_at_idx on shop_order_2024_10 o_2  (cost=0.15..50.30 rows=410 width=90) (never executed)
+         ->  Index Scan Backward using shop_order_2024_09_created_at_idx on shop_order_2024_09 o_1  (cost=0.15..50.30 rows=410 width=90) (never executed)
+ Planning:
+   Buffers: shared hit=105
+ Planning Time: 2.538 ms
+ Execution Time: 0.422 ms
+(40 rows)
+
+Time: 14.803 ms

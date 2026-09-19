@@ -1,0 +1,21 @@
+=== Replication status (lab 04) ===
+Read scaling enabled : True
+Replica alias        : replica
+Replica configured    : True
+
+--- Primary (default) ---
+  role=primary host=172.22.0.2/32 port=5432 db=flower_shop
+  current WAL LSN: 3/3802CAE8
+
+--- pg_stat_replication (on Primary) ---
+  app=flower_shop_replica client=172.22.0.3/32 state=streaming sync=async
+    sent=3/3802CAE8 flush=3/3802CAE8 replay=3/3802CAE8
+    write_lag=—s flush_lag=—s replay_lag=—s reply_lag=7.590s
+
+--- Replica ---
+  role=replica host=172.22.0.3/32 port=5432 db=flower_shop
+  in recovery     : True
+  replay LSN      : 3/3802CAE8
+  last replay ts  : —
+  lag (seconds)   : 0.000
+  lag (bytes)     : 0

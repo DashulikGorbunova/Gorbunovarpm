@@ -1,0 +1,78 @@
+Timing is on.
+=== Lab 03: partition shop_order ===
+docker : NOTICE:  Dropped FK shop_orderitem_order_id_2f1b00cf_fk_shop_order_id
+C:\Users\user\AppData\Local\Temp\ps-script-c6061e52-1af7-4b64-8613-5ed0dc82e56e.ps1:78 знак:61
++ ... order.sql | docker compose exec -T db psql -U flower -d flower_shop 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (NOTICE:  Droppe...k_shop_order_id:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+NOTICE:  Copying rows into partitioned table (may take several minutes)...
+NOTICE:  shop_order converted; creating indexes next...
+DO
+Time: 457317.764 ms (07:37.318)
+CREATE INDEX
+Time: 17236.482 ms (00:17.236)
+CREATE INDEX
+Time: 24296.001 ms (00:24.296)
+CREATE INDEX
+Time: 24344.240 ms (00:24.344)
+CREATE INDEX
+Time: 29233.157 ms (00:29.233)
+CREATE INDEX
+Time: 9700.123 ms (00:09.700)
+CREATE INDEX
+Time: 17135.589 ms (00:17.136)
+--- partitions ---
+   partition_name   
+--------------------
+ shop_order_2025_09
+ shop_order_2025_10
+ shop_order_2025_11
+ shop_order_2025_12
+ shop_order_2026_01
+ shop_order_2026_02
+ shop_order_2026_03
+ shop_order_2026_04
+ shop_order_2026_05
+ shop_order_2026_06
+ shop_order_2026_07
+ shop_order_2026_08
+ shop_order_2026_09
+ shop_order_2026_10
+ shop_order_2026_11
+ shop_order_2026_12
+(16 rows)
+
+Time: 11.848 ms
+--- rows per partition (sample) ---
+   partition_name   |  rows  
+--------------------+--------
+ shop_order_2025_09 | 279242
+ shop_order_2025_10 | 425347
+ shop_order_2025_11 | 411213
+ shop_order_2025_12 | 424617
+ shop_order_2026_01 | 424425
+ shop_order_2026_02 | 382723
+ shop_order_2026_03 | 424676
+ shop_order_2026_04 | 411072
+ shop_order_2026_05 | 424588
+ shop_order_2026_06 | 410225
+ shop_order_2026_07 | 425274
+ shop_order_2026_08 | 425280
+ shop_order_2026_09 | 131318
+(13 rows)
+
+Time: 1652.973 ms (00:01.653)
+ total_orders 
+--------------
+      5000000
+(1 row)
+
+Time: 702.268 ms
+ is_partitioned 
+----------------
+ t
+(1 row)
+
+Time: 10.915 ms

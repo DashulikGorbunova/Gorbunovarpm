@@ -1,0 +1,263 @@
+Timing is on.
+=== Lab 03: shop_order query plans ===
+                                                                                           QUERY PLAN                                                                                           
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=5.93..167.74 rows=50 width=90) (actual time=3.559..4.321 rows=50 loops=1)
+   Buffers: shared hit=9 read=44
+   ->  Append  (cost=5.93..80927.06 rows=25005 width=90) (actual time=3.557..4.308 rows=50 loops=1)
+         Buffers: shared hit=9 read=44
+         Subplans Removed: 15
+         ->  Index Scan Backward using shop_order_2026_08_created_at_idx on shop_order_2026_08 shop_order_1  (cost=0.42..6866.94 rows=2126 width=90) (actual time=3.556..4.295 rows=50 loops=1)
+               Index Cond: ((created_at >= '2026-08-01'::date) AND (created_at < '2026-09-01'::date))
+               Buffers: shared hit=9 read=44
+ Planning:
+   Buffers: shared hit=2260 read=92
+ Planning Time: 82.066 ms
+ Execution Time: 4.548 ms
+(12 rows)
+
+Time: 99.616 ms
+                                                                                             QUERY PLAN                                                                                              
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=6.01..193.28 rows=50 width=90) (actual time=0.168..0.658 rows=50 loops=1)
+   Buffers: shared hit=56 read=3
+   ->  Append  (cost=6.01..31230.44 rows=8337 width=90) (actual time=0.167..0.646 rows=50 loops=1)
+         Buffers: shared hit=56 read=3
+         Subplans Removed: 11
+         ->  Index Scan Backward using shop_order_2026_12_status_created_at_idx on shop_order_2026_12 shop_order_5  (cost=0.15..8.17 rows=1 width=90) (actual time=0.036..0.036 rows=0 loops=1)
+               Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+               Buffers: shared hit=2
+         ->  Index Scan Backward using shop_order_2026_11_status_created_at_idx on shop_order_2026_11 shop_order_4  (cost=0.15..8.17 rows=1 width=90) (actual time=0.015..0.015 rows=0 loops=1)
+               Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+               Buffers: shared hit=2
+         ->  Index Scan Backward using shop_order_2026_10_status_created_at_idx on shop_order_2026_10 shop_order_3  (cost=0.15..8.17 rows=1 width=90) (actual time=0.015..0.015 rows=0 loops=1)
+               Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+               Buffers: shared hit=2
+         ->  Index Scan Backward using shop_order_2026_09_status_created_at_idx on shop_order_2026_09 shop_order_2  (cost=0.42..824.81 rows=219 width=90) (actual time=0.099..0.566 rows=50 loops=1)
+               Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+               Buffers: shared hit=50 read=3
+         ->  Index Scan Backward using shop_order_2026_08_status_created_at_idx on shop_order_2026_08 shop_order_1  (cost=0.43..2650.61 rows=709 width=90) (never executed)
+               Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+ Planning:
+   Buffers: shared hit=24
+ Planning Time: 2.705 ms
+ Execution Time: 0.947 ms
+(23 rows)
+
+Time: 20.098 ms
+                                                                                             QUERY PLAN                                                                                             
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=93313.71..93475.65 rows=50 width=90) (actual time=4650.804..4661.934 rows=50 loops=1)
+   Buffers: shared hit=14827 read=35084
+   InitPlan 1 (returns $1)
+     ->  Limit  (cost=93307.78..93307.78 rows=1 width=16) (actual time=4650.334..4660.842 rows=1 loops=1)
+           Buffers: shared hit=14795 read=35054
+           ->  Sort  (cost=93307.78..93308.28 rows=200 width=16) (actual time=4650.333..4660.839 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=14795 read=35054
+                 ->  Finalize GroupAggregate  (cost=93256.11..93306.78 rows=200 width=16) (actual time=4632.291..4658.711 rows=5000 loops=1)
+                       Group Key: shop_order_17.customer_id
+                       Buffers: shared hit=14795 read=35054
+                       ->  Gather Merge  (cost=93256.11..93302.78 rows=400 width=16) (actual time=4632.275..4650.854 rows=15000 loops=1)
+                             Workers Planned: 2
+                             Workers Launched: 2
+                             Buffers: shared hit=14795 read=35054
+                             ->  Sort  (cost=92256.08..92256.58 rows=200 width=16) (actual time=4607.710..4610.283 rows=5000 loops=3)
+                                   Sort Key: shop_order_17.customer_id
+                                   Sort Method: quicksort  Memory: 388kB
+                                   Buffers: shared hit=14795 read=35054
+                                   Worker 0:  Sort Method: quicksort  Memory: 388kB
+                                   Worker 1:  Sort Method: quicksort  Memory: 388kB
+                                   ->  Partial HashAggregate  (cost=92246.44..92248.44 rows=200 width=16) (actual time=4595.788..4600.288 rows=5000 loops=3)
+                                         Group Key: shop_order_17.customer_id
+                                         Batches: 1  Memory Usage: 737kB
+                                         Buffers: shared hit=14779 read=35054
+                                         Worker 0:  Batches: 1  Memory Usage: 737kB
+                                         Worker 1:  Batches: 1  Memory Usage: 737kB
+                                         ->  Parallel Append  (cost=0.00..81827.20 rows=2083848 width=8) (actual time=0.065..2567.839 rows=1666667 loops=3)
+                                               Buffers: shared hit=14779 read=35054
+                                               ->  Parallel Seq Scan on shop_order_2025_10 shop_order_19  (cost=0.00..6011.28 rows=177228 width=8) (actual time=0.078..685.922 rows=425347 loops=1)
+                                                     Buffers: shared hit=192 read=4047
+                                               ->  Parallel Seq Scan on shop_order_2026_07 shop_order_28  (cost=0.00..6010.98 rows=177198 width=8) (actual time=0.092..654.886 rows=425274 loops=1)
+                                                     Buffers: shared hit=480 read=3759
+                                               ->  Parallel Seq Scan on shop_order_2026_08 shop_order_29  (cost=0.00..6010.00 rows=177200 width=8) (actual time=0.072..488.227 rows=425280 loops=1)
+                                                     Buffers: shared hit=471 read=3767
+                                               ->  Parallel Seq Scan on shop_order_2026_03 shop_order_24  (cost=0.00..6001.48 rows=176948 width=8) (actual time=0.073..451.665 rows=424676 loops=1)
+                                                     Buffers: shared hit=500 read=3732
+                                               ->  Parallel Seq Scan on shop_order_2025_12 shop_order_21  (cost=0.00..6001.24 rows=176924 width=8) (actual time=0.081..372.237 rows=424617 loops=1)
+                                                     Buffers: shared hit=356 read=3876
+                                               ->  Parallel Seq Scan on shop_order_2026_05 shop_order_26  (cost=0.00..6001.12 rows=176912 width=8) (actual time=0.072..403.911 rows=424588 loops=1)
+                                                     Buffers: shared hit=472 read=3760
+                                               ->  Parallel Seq Scan on shop_order_2026_01 shop_order_22  (cost=0.00..5997.44 rows=176844 width=8) (actual time=0.033..117.544 rows=141475 loops=3)
+                                                     Buffers: shared hit=384 read=3845
+                                               ->  Parallel Seq Scan on shop_order_2025_11 shop_order_20  (cost=0.00..5811.39 rows=171339 width=8) (actual time=0.165..170.719 rows=205606 loops=2)
+                                                     Buffers: shared hit=163 read=3935
+                                               ->  Parallel Seq Scan on shop_order_2026_04 shop_order_25  (cost=0.00..5809.80 rows=171280 width=8) (actual time=0.049..345.010 rows=411072 loops=1)
+                                                     Buffers: shared hit=428 read=3669
+                                               ->  Parallel Seq Scan on shop_order_2026_06 shop_order_27  (cost=0.00..5798.27 rows=170927 width=8) (actual time=0.024..350.334 rows=410225 loops=1)
+                                                     Buffers: shared hit=4013 read=76
+                                               ->  Parallel Seq Scan on shop_order_2026_02 shop_order_23  (cost=0.00..5409.68 rows=159468 width=8) (actual time=0.021..363.701 rows=382723 loops=1)
+                                                     Buffers: shared hit=3666 read=149
+                                               ->  Parallel Seq Scan on shop_order_2025_09 shop_order_18  (cost=0.00..4426.60 rows=164260 width=8) (actual time=0.023..361.448 rows=279242 loops=1)
+                                                     Buffers: shared hit=2345 read=439
+                                               ->  Parallel Seq Scan on shop_order_2026_09 shop_order_30  (cost=0.00..2081.46 rows=77246 width=8) (actual time=0.013..222.054 rows=131318 loops=1)
+                                                     Buffers: shared hit=1309
+                                               ->  Parallel Seq Scan on shop_order_2026_10 shop_order_31  (cost=0.00..12.41 rows=241 width=8) (actual time=0.001..0.001 rows=0 loops=1)
+                                               ->  Parallel Seq Scan on shop_order_2026_11 shop_order_32  (cost=0.00..12.41 rows=241 width=8) (actual time=0.001..0.001 rows=0 loops=1)
+                                               ->  Parallel Seq Scan on shop_order_2026_12 shop_order_33  (cost=0.00..12.41 rows=241 width=8) (actual time=0.002..0.002 rows=0 loops=1)
+   ->  Append  (cost=5.93..80992.54 rows=25005 width=90) (actual time=4650.801..4651.409 rows=50 loops=1)
+         Buffers: shared hit=12018 read=5028
+         ->  Index Scan using shop_order_2026_12_customer_id_created_at_idx on shop_order_2026_12 shop_order_16  (cost=0.15..12.18 rows=2 width=90) (actual time=4650.402..4650.402 rows=0 loops=1)
+               Index Cond: (customer_id = $1)
+               Buffers: shared hit=11988 read=4998
+         ->  Index Scan using shop_order_2026_11_customer_id_created_at_idx on shop_order_2026_11 shop_order_15  (cost=0.15..12.18 rows=2 width=90) (actual time=0.034..0.034 rows=0 loops=1)
+               Index Cond: (customer_id = $1)
+               Buffers: shared hit=2
+         ->  Index Scan using shop_order_2026_10_customer_id_created_at_idx on shop_order_2026_10 shop_order_14  (cost=0.15..12.18 rows=2 width=90) (actual time=0.025..0.025 rows=0 loops=1)
+               Index Cond: (customer_id = $1)
+               Buffers: shared hit=2
+         ->  Index Scan using shop_order_2026_09_customer_id_created_at_idx on shop_order_2026_09 shop_order_13  (cost=0.42..2127.92 rows=657 width=90) (actual time=0.337..0.398 rows=25 loops=1)
+               Index Cond: (customer_id = $1)
+               Buffers: shared hit=25 read=3
+         ->  Index Scan using shop_order_2026_08_customer_id_created_at_idx on shop_order_2026_08 shop_order_12  (cost=0.42..6873.63 rows=2126 width=90) (actual time=0.266..0.528 rows=25 loops=1)
+               Index Cond: (customer_id = $1)
+               Buffers: shared hit=1 read=27
+         ->  Index Scan using shop_order_2026_07_customer_id_created_at_idx on shop_order_2026_07 shop_order_11  (cost=0.42..6873.63 rows=2126 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_06_customer_id_created_at_idx on shop_order_2026_06 shop_order_10  (cost=0.42..6628.31 rows=2051 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_05_customer_id_created_at_idx on shop_order_2026_05 shop_order_9  (cost=0.42..6865.57 rows=2123 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_04_customer_id_created_at_idx on shop_order_2026_04 shop_order_8  (cost=0.42..6640.39 rows=2055 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_03_customer_id_created_at_idx on shop_order_2026_03 shop_order_7  (cost=0.42..6865.57 rows=2123 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_02_customer_id_created_at_idx on shop_order_2026_02 shop_order_6  (cost=0.42..6189.92 rows=1914 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2026_01_customer_id_created_at_idx on shop_order_2026_01 shop_order_5  (cost=0.42..6861.56 rows=2122 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2025_12_customer_id_created_at_idx on shop_order_2025_12 shop_order_4  (cost=0.42..6865.57 rows=2123 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2025_11_customer_id_created_at_idx on shop_order_2025_11 shop_order_3  (cost=0.42..6644.40 rows=2056 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2025_10_customer_id_created_at_idx on shop_order_2025_10 shop_order_2  (cost=0.42..6877.65 rows=2127 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+         ->  Index Scan using shop_order_2025_09_customer_id_created_at_idx on shop_order_2025_09 shop_order_1  (cost=0.42..4516.85 rows=1396 width=90) (never executed)
+               Index Cond: (customer_id = $1)
+ Planning:
+   Buffers: shared hit=59
+ Planning Time: 3.872 ms
+ Execution Time: 4663.324 ms
+(102 rows)
+
+Time: 4674.153 ms (00:04.674)
+                                                                   QUERY PLAN                                                                    
+-------------------------------------------------------------------------------------------------------------------------------------------------
+ Append  (cost=39.24..43170.35 rows=25005 width=170) (actual time=7.551..20.884 rows=1 loops=1)
+   Buffers: shared hit=9 read=40
+   ->  Bitmap Heap Scan on shop_order_2025_09 shop_order_1  (cost=39.24..2402.10 rows=1396 width=170) (actual time=5.812..5.813 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared hit=3 read=3
+         ->  Bitmap Index Scan on shop_order_2025_09_pkey  (cost=0.00..38.89 rows=1396 width=0) (actual time=5.806..5.807 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared hit=3 read=3
+   ->  Bitmap Heap Scan on shop_order_2025_10 shop_order_2  (cost=60.91..3658.94 rows=2127 width=170) (actual time=1.734..1.736 rows=1 loops=1)
+         Recheck Cond: (id = 1)
+         Heap Blocks: exact=1
+         Buffers: shared read=4
+         ->  Bitmap Index Scan on shop_order_2025_10_pkey  (cost=0.00..60.38 rows=2127 width=0) (actual time=1.710..1.710 rows=1 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2025_11 shop_order_3  (cost=60.36..3538.22 rows=2056 width=170) (actual time=1.108..1.108 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2025_11_pkey  (cost=0.00..59.84 rows=2056 width=0) (actual time=1.105..1.105 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2025_12 shop_order_4  (cost=60.88..3652.74 rows=2123 width=170) (actual time=0.779..0.779 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2025_12_pkey  (cost=0.00..60.34 rows=2123 width=0) (actual time=0.776..0.776 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_01 shop_order_5  (cost=60.87..3650.43 rows=2122 width=170) (actual time=0.862..0.863 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_01_pkey  (cost=0.00..60.34 rows=2122 width=0) (actual time=0.860..0.860 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_02 shop_order_6  (cost=55.26..3293.56 rows=1914 width=170) (actual time=0.808..0.809 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_02_pkey  (cost=0.00..54.78 rows=1914 width=0) (actual time=0.796..0.796 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_03 shop_order_7  (cost=60.88..3652.74 rows=2123 width=170) (actual time=0.852..0.853 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_03_pkey  (cost=0.00..60.34 rows=2123 width=0) (actual time=0.850..0.850 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_04 shop_order_8  (cost=60.35..3536.67 rows=2055 width=170) (actual time=0.690..0.691 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_04_pkey  (cost=0.00..59.84 rows=2055 width=0) (actual time=0.688..0.688 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_05 shop_order_9  (cost=60.88..3652.74 rows=2123 width=170) (actual time=0.680..0.681 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_05_pkey  (cost=0.00..60.34 rows=2123 width=0) (actual time=0.648..0.648 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_06 shop_order_10  (cost=60.32..3530.09 rows=2051 width=170) (actual time=0.921..0.922 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_06_pkey  (cost=0.00..59.80 rows=2051 width=0) (actual time=0.918..0.918 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_07 shop_order_11  (cost=60.90..3657.77 rows=2126 width=170) (actual time=0.606..0.607 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_07_pkey  (cost=0.00..60.37 rows=2126 width=0) (actual time=0.598..0.598 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_08 shop_order_12  (cost=60.90..3657.39 rows=2126 width=170) (actual time=0.766..0.767 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_08_pkey  (cost=0.00..60.37 rows=2126 width=0) (actual time=0.764..0.764 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_09 shop_order_13  (cost=21.51..1133.42 rows=657 width=170) (actual time=5.203..5.203 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared read=3
+         ->  Bitmap Index Scan on shop_order_2026_09_pkey  (cost=0.00..21.35 rows=657 width=0) (actual time=5.188..5.189 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared read=3
+   ->  Bitmap Heap Scan on shop_order_2026_10 shop_order_14  (cost=4.16..9.50 rows=2 width=170) (actual time=0.011..0.012 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared hit=2
+         ->  Bitmap Index Scan on shop_order_2026_10_pkey  (cost=0.00..4.16 rows=2 width=0) (actual time=0.009..0.010 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared hit=2
+   ->  Bitmap Heap Scan on shop_order_2026_11 shop_order_15  (cost=4.16..9.50 rows=2 width=170) (actual time=0.009..0.010 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared hit=2
+         ->  Bitmap Index Scan on shop_order_2026_11_pkey  (cost=0.00..4.16 rows=2 width=0) (actual time=0.009..0.009 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared hit=2
+   ->  Bitmap Heap Scan on shop_order_2026_12 shop_order_16  (cost=4.16..9.50 rows=2 width=170) (actual time=0.004..0.005 rows=0 loops=1)
+         Recheck Cond: (id = 1)
+         Buffers: shared hit=2
+         ->  Bitmap Index Scan on shop_order_2026_12_pkey  (cost=0.00..4.16 rows=2 width=0) (actual time=0.003..0.003 rows=0 loops=1)
+               Index Cond: (id = 1)
+               Buffers: shared hit=2
+ Planning:
+   Buffers: shared hit=104
+ Planning Time: 3.871 ms
+ Execution Time: 22.058 ms
+(103 rows)
+
+Time: 28.520 ms
+=== done ===

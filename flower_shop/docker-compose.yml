@@ -1,0 +1,176 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Primary — accepts INSERT/UPDATE/DELETE and streams WAL to the Replica.
+  # Service name kept as "db" so existing commands (docker compose exec db ...)
+  # keep working. Container name makes the role explicit.
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: flower_shop_db_primary
+    environment:
+      POSTGRES_DB: flower_shop
+      POSTGRES_USER: flower
+      POSTGRES_PASSWORD: flowerpass
+      # Role used by the Replica for streaming replication (created on init)
+      POSTGRES_REPLICATION_USER: replicator
+      POSTGRES_REPLICATION_PASSWORD: replicapass
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - max_wal_senders=10
+      - -c
+      - wal_keep_size=128MB
+      - -c
+      - hot_standby=on
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # pg_hba.conf with the `replication` rule (otherwise Replica cannot connect)
+      - ./docker/postgres/primary/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      # init hook: CREATE ROLE replicator WITH REPLICATION LOGIN ...
+      - ./docker/postgres/primary/initdb:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flower -d flower_shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Replica — read-only hot standby. On the first start it clones the Primary
+  # with pg_basebackup and then streams WAL from it.
+  # ---------------------------------------------------------------------------
+  db_replica:
+    image: postgres:16-alpine
+    container_name: flower_shop_db_replica
+    environment:
+      POSTGRES_DB: flower_shop
+      POSTGRES_USER: flower
+      POSTGRES_PASSWORD: flowerpass
+      PRIMARY_HOST: db
+      PRIMARY_PORT: 5432
+      REPLICATION_USER: replicator
+      REPLICATION_PASSWORD: replicapass
+      REPLICA_APPLICATION_NAME: flower_shop_replica
+    # Started through bash so the executable bit is not required on Windows
+    entrypoint: ["/bin/bash", "/usr/local/bin/replica-entrypoint.sh"]
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+      - ./docker/postgres/replica/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    ports:
+      - "5433:5432"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flower -d flower_shop"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  backend:
+    build: .
+    container_name: flower_shop_backend
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      # Primary — writes, migrations
+      - DATABASE_URL=postgres://flower:flowerpass@db:5432/flower_shop
+      # Replica — read scaling (lab 04)
+      - DATABASE_REPLICA_URL=postgres://flower:flowerpass@db_replica:5432/flower_shop
+      - READ_REPLICA_ENABLED=1
+      # Shards — horizontal data distribution (lab 05)
+      - SHARD0_URL=postgres://flower:flowerpass@shard0:5432/flower_shop_shard
+      - SHARD1_URL=postgres://flower:flowerpass@shard1:5432/flower_shop_shard
+      - SHARD2_URL=postgres://flower:flowerpass@shard2:5432/flower_shop_shard
+      - SHARD_STRATEGY=consistent
+      - SHARD_VNODES=160
+      - DJANGO_SECRET_KEY=dev-secret-key-change-in-production
+      - DJANGO_DEBUG=1
+      - DJANGO_ALLOWED_HOSTS=*
+      - TELEGRAM_BOT_TOKEN=8549191648:AAGwYeJXQT59Iev6pjxuWug6n3nDXW_VFsU
+      - TELEGRAM_BOT_USERNAME=Dahnfueshnr_bot
+      - TELEGRAM_CHAT_ID=1188068476
+    depends_on:
+      db:
+        condition: service_healthy
+      db_replica:
+        condition: service_healthy
+      shard0:
+        condition: service_healthy
+      shard1:
+        condition: service_healthy
+      shard2:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # Shards (lab 05) — three independent PostgreSQL instances used to distribute
+  # the shop_order data horizontally by the shard key `customer_id`.
+  # ---------------------------------------------------------------------------
+  shard0:
+    image: postgres:16-alpine
+    container_name: flower_shop_shard0
+    environment:
+      POSTGRES_DB: flower_shop_shard
+      POSTGRES_USER: flower
+      POSTGRES_PASSWORD: flowerpass
+    volumes:
+      - shard0_data:/var/lib/postgresql/data
+    ports:
+      - "6440:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flower -d flower_shop_shard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  shard1:
+    image: postgres:16-alpine
+    container_name: flower_shop_shard1
+    environment:
+      POSTGRES_DB: flower_shop_shard
+      POSTGRES_USER: flower
+      POSTGRES_PASSWORD: flowerpass
+    volumes:
+      - shard1_data:/var/lib/postgresql/data
+    ports:
+      - "6441:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flower -d flower_shop_shard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  shard2:
+    image: postgres:16-alpine
+    container_name: flower_shop_shard2
+    environment:
+      POSTGRES_DB: flower_shop_shard
+      POSTGRES_USER: flower
+      POSTGRES_PASSWORD: flowerpass
+    volumes:
+      - shard2_data:/var/lib/postgresql/data
+    ports:
+      - "6442:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flower -d flower_shop_shard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  postgres_replica_data:
+  shard0_data:
+  shard1_data:
+  shard2_data:

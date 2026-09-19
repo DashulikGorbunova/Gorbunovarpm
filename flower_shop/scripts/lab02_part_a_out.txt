@@ -1,0 +1,338 @@
+Timing is off.
+Pager usage is off.
+DROP TABLE
+docker : NOTICE:  table "events" does not exist, skipping
+C:\Users\user\AppData\Local\Temp\ps-script-a94b343d-ce08-40ae-8521-b00d9600532a.ps1:78 знак:49
++ ... rt_a.sql" | docker compose exec -T db psql -U flower -d flower_shop > ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (NOTICE:  table ...exist, skipping:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+CREATE TABLE
+CREATE FUNCTION
+CREATE FUNCTION
+=== FILL 10000 ===
+ lab02_fill_events 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+NOTICE:  SIZE|10k|rows=10000|table=672 kB|total=944 kB
+ lab02_report_size 
+-------------------
+ 
+(1 row)
+
+=== SELECT no index 10k ===
+                                            QUERY PLAN                                             
+---------------------------------------------------------------------------------------------------
+ Seq Scan on events  (cost=0.00..209.00 rows=1 width=36) (actual time=2.133..2.134 rows=0 loops=1)
+   Filter: (user_id = 123)
+   Rows Removed by Filter: 10000
+   Buffers: shared hit=84
+ Planning:
+   Buffers: shared hit=17
+ Planning Time: 0.502 ms
+ Execution Time: 2.156 ms
+(8 rows)
+
+=== FILL to 100000 ===
+ lab02_fill_events 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+ lab02_report_size 
+-------------------
+ 
+(1 row)
+
+=== SELECT no index 100k ===
+NOTICE:  SIZE|100k|rows=100000|table=6672 kB|total=8912 kB
+                                              QUERY PLAN                                              
+------------------------------------------------------------------------------------------------------
+ Seq Scan on events  (cost=0.00..2084.00 rows=2 width=36) (actual time=26.431..26.432 rows=0 loops=1)
+   Filter: (user_id = 123)
+   Rows Removed by Filter: 100000
+   Buffers: shared hit=834
+ Planning:
+   Buffers: shared hit=12
+ Planning Time: 0.362 ms
+ Execution Time: 26.461 ms
+(8 rows)
+
+=== SELECT WITH index 100k ===
+CREATE INDEX
+ANALYZE
+                                                        QUERY PLAN                                                         
+---------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on events  (cost=4.31..12.04 rows=2 width=36) (actual time=0.101..0.102 rows=0 loops=1)
+   Recheck Cond: (user_id = 123)
+   Buffers: shared hit=3 read=2
+   ->  Bitmap Index Scan on idx_events_user_id  (cost=0.00..4.31 rows=2 width=0) (actual time=0.098..0.098 rows=0 loops=1)
+         Index Cond: (user_id = 123)
+         Buffers: shared hit=3 read=2
+ Planning:
+   Buffers: shared hit=19 read=1
+ Planning Time: 0.825 ms
+ Execution Time: 0.172 ms
+(10 rows)
+
+DROP INDEX
+=== FILL to 1000000 ===
+ lab02_fill_events 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+ lab02_report_size 
+-------------------
+ 
+(1 row)
+
+=== SELECT no index 1m ===
+NOTICE:  SIZE|1m|rows=1000000|table=65 MB|total=87 MB
+                                                      QUERY PLAN                                                       
+-----------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..14543.43 rows=11 width=36) (actual time=58.930..142.600 rows=13 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=8334
+   ->  Parallel Seq Scan on events  (cost=0.00..13542.33 rows=5 width=36) (actual time=27.856..113.279 rows=4 loops=3)
+         Filter: (user_id = 123)
+         Rows Removed by Filter: 333329
+         Buffers: shared hit=8334
+ Planning:
+   Buffers: shared hit=12
+ Planning Time: 0.398 ms
+ Execution Time: 142.640 ms
+(12 rows)
+
+=== SELECT WITH index 1m ===
+CREATE INDEX
+ANALYZE
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on events  (cost=4.51..47.45 rows=11 width=36) (actual time=0.092..0.121 rows=13 loops=1)
+   Recheck Cond: (user_id = 123)
+   Heap Blocks: exact=13
+   Buffers: shared hit=13 read=3
+   ->  Bitmap Index Scan on idx_events_user_id  (cost=0.00..4.51 rows=11 width=0) (actual time=0.080..0.081 rows=13 loops=1)
+         Index Cond: (user_id = 123)
+         Buffers: shared read=3
+ Planning:
+   Buffers: shared hit=17 read=1
+ Planning Time: 0.920 ms
+ Execution Time: 0.346 ms
+(11 rows)
+
+DROP INDEX
+=== FILL to 5000000 ===
+ lab02_fill_events 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+ lab02_report_size 
+-------------------
+ 
+(1 row)
+
+=== SELECT no index 5m ===
+NOTICE:  SIZE|5m|rows=5000000|table=326 MB|total=433 MB
+                                                       QUERY PLAN                                                        
+-------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..68713.68 rows=51 width=36) (actual time=61.431..867.356 rows=59 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=13739 read=27928
+   ->  Parallel Seq Scan on events  (cost=0.00..67708.58 rows=21 width=36) (actual time=30.908..760.846 rows=20 loops=3)
+         Filter: (user_id = 123)
+         Rows Removed by Filter: 1666647
+         Buffers: shared hit=13739 read=27928
+ Planning:
+   Buffers: shared hit=14
+ Planning Time: 0.357 ms
+ Execution Time: 867.522 ms
+(12 rows)
+
+=== SELECT WITH index 5m ===
+CREATE INDEX
+ANALYZE
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on events  (cost=4.83..204.11 rows=51 width=36) (actual time=0.080..0.950 rows=59 loops=1)
+   Recheck Cond: (user_id = 123)
+   Heap Blocks: exact=59
+   Buffers: shared hit=19 read=43
+   ->  Bitmap Index Scan on idx_events_user_id  (cost=0.00..4.82 rows=51 width=0) (actual time=0.050..0.051 rows=59 loops=1)
+         Index Cond: (user_id = 123)
+         Buffers: shared read=3
+ Planning:
+   Buffers: shared hit=25 read=1
+ Planning Time: 1.364 ms
+ Execution Time: 1.043 ms
+(11 rows)
+
+=== RANGE 1 day BEFORE created_at index ===
+                                                         QUERY PLAN                                                          
+-----------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..80411.32 rows=12861 width=36) (actual time=0.555..2395.957 rows=13648 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=13909 read=27758
+   ->  Parallel Seq Scan on events  (cost=0.00..78125.22 rows=5359 width=36) (actual time=0.433..2301.581 rows=4549 loops=3)
+         Filter: (created_at >= (now() - '1 day'::interval))
+         Rows Removed by Filter: 1662117
+         Buffers: shared hit=13909 read=27758
+ Planning:
+   Buffers: shared read=3
+ Planning Time: 1.532 ms
+ Execution Time: 2402.307 ms
+(12 rows)
+
+CREATE INDEX
+ANALYZE
+=== RANGE 1 day AFTER created_at index ===
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on events  (cost=259.39..28926.44 rows=13800 width=36) (actual time=14.262..592.470 rows=13647 loops=1)
+   Recheck Cond: (created_at >= (now() - '1 day'::interval))
+   Heap Blocks: exact=11684
+   Buffers: shared hit=1652 read=10076 written=4264
+   ->  Bitmap Index Scan on idx_events_created_at  (cost=0.00..255.94 rows=13800 width=0) (actual time=9.578..9.579 rows=13647 loops=1)
+         Index Cond: (created_at >= (now() - '1 day'::interval))
+         Buffers: shared hit=5 read=39
+ Planning:
+   Buffers: shared hit=27 read=4
+ Planning Time: 1.080 ms
+ Execution Time: 595.935 ms
+(11 rows)
+
+=== SORT/LIMIT before composite ===
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=205.56..205.69 rows=51 width=36) (actual time=4.088..4.113 rows=59 loops=1)
+   Buffers: shared hit=20 read=42 written=23
+   ->  Sort  (cost=205.56..205.69 rows=51 width=36) (actual time=4.085..4.096 rows=59 loops=1)
+         Sort Key: created_at DESC
+         Sort Method: quicksort  Memory: 29kB
+         Buffers: shared hit=20 read=42 written=23
+         ->  Bitmap Heap Scan on events  (cost=4.83..204.11 rows=51 width=36) (actual time=2.135..4.006 rows=59 loops=1)
+               Recheck Cond: (user_id = 123)
+               Heap Blocks: exact=59
+               Buffers: shared hit=20 read=42 written=23
+               ->  Bitmap Index Scan on idx_events_user_id  (cost=0.00..4.82 rows=51 width=0) (actual time=2.108..2.109 rows=59 loops=1)
+                     Index Cond: (user_id = 123)
+                     Buffers: shared read=3 written=3
+ Planning:
+   Buffers: shared hit=8 read=9 written=6
+ Planning Time: 4.136 ms
+ Execution Time: 4.283 ms
+(17 rows)
+
+CREATE INDEX
+ANALYZE
+=== SORT/LIMIT after composite ===
+                                                                  QUERY PLAN                                                                  
+----------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=205.56..205.69 rows=51 width=36) (actual time=2.804..2.823 rows=59 loops=1)
+   Buffers: shared hit=59 read=3
+   ->  Sort  (cost=205.56..205.69 rows=51 width=36) (actual time=2.802..2.810 rows=59 loops=1)
+         Sort Key: created_at DESC
+         Sort Method: quicksort  Memory: 29kB
+         Buffers: shared hit=59 read=3
+         ->  Bitmap Heap Scan on events  (cost=4.83..204.11 rows=51 width=36) (actual time=2.623..2.743 rows=59 loops=1)
+               Recheck Cond: (user_id = 123)
+               Heap Blocks: exact=59
+               Buffers: shared hit=59 read=3
+               ->  Bitmap Index Scan on idx_events_user_created  (cost=0.00..4.82 rows=51 width=0) (actual time=2.595..2.595 rows=59 loops=1)
+                     Index Cond: (user_id = 123)
+                     Buffers: shared read=3
+ Planning:
+   Buffers: shared hit=25 read=1
+ Planning Time: 0.900 ms
+ Execution Time: 2.977 ms
+(17 rows)
+
+=== AGGREGATION 30 days ===
+                                                                              QUERY PLAN                                                                               
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Finalize GroupAggregate  (cost=54350.95..54351.97 rows=4 width=15) (actual time=1832.253..1862.577 rows=4 loops=1)
+   Group Key: event_type
+   Buffers: shared hit=529 read=42281 written=2246
+   ->  Gather Merge  (cost=54350.95..54351.89 rows=8 width=15) (actual time=1832.236..1862.551 rows=12 loops=1)
+         Workers Planned: 2
+         Workers Launched: 2
+         Buffers: shared hit=529 read=42281 written=2246
+         ->  Sort  (cost=53350.93..53350.94 rows=4 width=15) (actual time=1740.888..1740.892 rows=4 loops=3)
+               Sort Key: event_type
+               Sort Method: quicksort  Memory: 25kB
+               Buffers: shared hit=529 read=42281 written=2246
+               Worker 0:  Sort Method: quicksort  Memory: 25kB
+               Worker 1:  Sort Method: quicksort  Memory: 25kB
+               ->  Partial HashAggregate  (cost=53350.85..53350.89 rows=4 width=15) (actual time=1740.224..1740.228 rows=4 loops=3)
+                     Group Key: event_type
+                     Batches: 1  Memory Usage: 24kB
+                     Buffers: shared hit=514 read=42280 written=2246
+                     Worker 0:  Batches: 1  Memory Usage: 24kB
+                     Worker 1:  Batches: 1  Memory Usage: 24kB
+                     ->  Parallel Bitmap Heap Scan on events  (cost=7786.36..52484.74 rows=173222 width=7) (actual time=231.630..1546.082 rows=137098 loops=3)
+                           Recheck Cond: (created_at >= (now() - '30 days'::interval))
+                           Heap Blocks: exact=15282
+                           Buffers: shared hit=514 read=42280 written=2246
+                           ->  Bitmap Index Scan on idx_events_created_at  (cost=0.00..7682.43 rows=415732 width=0) (actual time=297.246..297.249 rows=411295 loops=1)
+                                 Index Cond: (created_at >= (now() - '30 days'::interval))
+                                 Buffers: shared hit=1 read=1126
+ Planning:
+   Buffers: shared hit=8
+ Planning Time: 0.302 ms
+ Execution Time: 1862.818 ms
+(30 rows)
+
+=== INDEX SIZES at 5m ===
+      indexrelname       | index_size 
+-------------------------+------------
+ idx_events_user_created | 150 MB
+ idx_events_created_at   | 107 MB
+ events_pkey             | 107 MB
+ idx_events_user_id      | 34 MB
+(4 rows)
+
+=== INSERT cost WITH indexes (100k) ===
+Timing is on.
+INSERT 0 100000
+Time: 10567.346 ms (00:10.567)
+Timing is off.
+=== INSERT cost WITHOUT secondary indexes (100k) ===
+DROP INDEX
+DROP INDEX
+DROP INDEX
+Timing is on.
+INSERT 0 100000
+Time: 875.883 ms
+Timing is off.
+CREATE INDEX
+CREATE INDEX
+CREATE INDEX
+ANALYZE
+=== FINAL SIZE ===
+ lab02_report_size 
+-------------------
+ 
+(1 row)
+
+NOTICE:  SIZE|final|rows=5200000|table=339 MB|total=749 MB
+      indexrelname       | index_size 
+-------------------------+------------
+ events_pkey             | 111 MB
+ idx_events_created_at   | 108 MB
+ idx_events_user_created | 155 MB
+ idx_events_user_id      | 35 MB
+(4 rows)
+
+=== DONE PART A ===

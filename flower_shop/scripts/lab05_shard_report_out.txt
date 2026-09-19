@@ -1,0 +1,14 @@
+=== Shard report (lab 05) ===
+Table: shop_order_shard
+Shard key: customer_id
+Strategy: consistent
+
+Shard             Rows   Customers
+----------------------------------
+shard0           33350        1661
+shard1           33766        1698
+shard2           32884        1641
+----------------------------------
+TOTAL           100000
+
+Ideal per shard: 33333.33 rows, worst shard: 33766 rows, deviation: 1.3%

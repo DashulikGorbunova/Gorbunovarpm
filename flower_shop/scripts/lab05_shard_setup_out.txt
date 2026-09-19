@@ -1,0 +1,10 @@
+Shard setup started.
+Table: shop_order_shard
+Shard key: customer_id
+Strategy: consistent (vnodes=160)
+Ring points: 480
+
+shard0: schema ready (shop_order_shard + indexes + shard_meta)
+shard1: schema ready (shop_order_shard + indexes + shard_meta)
+shard2: schema ready (shop_order_shard + indexes + shard_meta)
+Shard setup finished.

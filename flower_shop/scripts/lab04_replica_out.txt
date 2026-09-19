@@ -1,0 +1,26 @@
+Timing is on.
+=== Lab 04 / REPLICA: this node is a hot standby (read-only) ===
+ is_in_recovery | server_addr | server_port | current_user 
+----------------+-------------+-------------+--------------
+ t              |             |             | flower
+(1 row)
+
+Time: 1.466 ms
+=== Lab 04 / REPLICA: the marker row written on PRIMARY ===
+  id  | first_name | last_name |           email           |      address      |          created_at           
+------+------------+-----------+---------------------------+-------------------+-------------------------------
+ 5001 | Lab04      | Replica   | lab04.replica@example.com | Primary (updated) | 2026-09-16 20:43:24.467699+00
+(1 row)
+
+Time: 21.160 ms
+=== Lab 04 / REPLICA: replay position and lag ===
+ replay_lsn |        last_replay_ts         |   replay_lag    
+------------+-------------------------------+-----------------
+ 3/38032D58 | 2026-09-19 10:31:35.030121+00 | 00:00:00.660666
+(1 row)
+
+Time: 0.871 ms
+=== Lab 04 / REPLICA: attempt to WRITE (expected to FAIL) ===
+Time: 5.429 ms
+=> Ожидаем: ERROR: cannot execute INSERT in a read-only transaction
+ERROR:  cannot execute INSERT in a read-only transaction

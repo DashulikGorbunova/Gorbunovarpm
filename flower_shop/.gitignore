@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.env
+*.log
+db.sqlite3
+.DS_Store
+.idea/
+.vscode/
+*.swp
+postgres_data/
+.pgdata/
+
+# Runtime state written by the partition jobs / alerting (lab 03)
+.last_partition_alert.txt
+.partition_alert_state.json
+.telegram_chat_id
+

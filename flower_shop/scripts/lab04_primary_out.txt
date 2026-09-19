@@ -1,0 +1,49 @@
+Timing is on.
+=== Lab 04 / PRIMARY: replication-related settings ===
+ wal_level 
+-----------
+ replica
+(1 row)
+
+Time: 2.638 ms
+ max_wal_senders 
+-----------------
+ 10
+(1 row)
+
+Time: 0.450 ms
+ wal_keep_size 
+---------------
+ 128MB
+(1 row)
+
+Time: 0.188 ms
+ hot_standby 
+-------------
+ on
+(1 row)
+
+Time: 0.141 ms
+=== Lab 04 / PRIMARY: connected replicas (pg_stat_replication) ===
+  application_name   | client_addr |   state   | sync_state |  sent_lsn  | write_lsn  | flush_lsn  | replay_lsn | reply_lag_seconds 
+---------------------+-------------+-----------+------------+------------+------------+------------+------------+-------------------
+ flower_shop_replica | 172.22.0.3  | streaming | async      | 3/3802CAE8 | 3/3802CAE8 | 3/3802CAE8 | 3/3802CAE8 |          8.538937
+(1 row)
+
+Time: 14.867 ms
+=== Lab 04 / PRIMARY: write a marker row ===
+  id  |           email           |          created_at           
+------+---------------------------+-------------------------------
+ 5001 | lab04.replica@example.com | 2026-09-16 20:43:24.467699+00
+(1 row)
+
+INSERT 0 1
+Time: 32.238 ms
+=== Lab 04 / PRIMARY: current WAL position ===
+ primary_current_lsn |          primary_now          
+---------------------+-------------------------------
+ 3/38032D20          | 2026-09-19 10:31:35.033223+00
+(1 row)
+
+Time: 0.648 ms
+=> Теперь выполните scripts/lab04_replica.sql на Replica и найдите lab04.replica@example.com

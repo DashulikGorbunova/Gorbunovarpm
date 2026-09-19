@@ -1,0 +1,1 @@
+{"table":"shop_order_shard","key":"customer_id","strategy":"consistent","shards":["shard0","shard1","shard2"],"rows":{"shard0":33350,"shard1":33766,"shard2":32884},"distinct_customers":{"shard0":1661,"shard1":1698,"shard2":1641},"total_rows":100000,"balance":{"ideal_per_shard":33333.33,"max_shard_rows":33766,"deviation_percent":1.3},"errors":null}

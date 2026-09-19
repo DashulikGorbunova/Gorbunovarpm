@@ -1,0 +1,12 @@
+Shard load started: 100000 orders, strategy=consistent
+Shards: shard0, shard1, shard2
+Shards cleared.
+  read=59224 (flushed shard1: 20000)
+  read=60089 (flushed shard0: 20000)
+  read=60708 (flushed shard2: 20000)
+
+Rows read from Primary: 100000
+  shard0: inserted 33350, now in table 33350
+  shard1: inserted 33766, now in table 33766
+  shard2: inserted 32884, now in table 32884
+Shard load finished.

@@ -1,0 +1,275 @@
+Timing is on.
+=== Lab 03: parts 1???11 ===
+DROP TABLE
+Time: 475.522 ms
+docker : NOTICE:  table "products" does not exist, skipping
+C:\Users\user\AppData\Local\Temp\ps-script-e4f724d3-50e7-4892-b1bb-3f140ce63982.ps1:78 знак:52
++ ... 01_11.sql | docker compose exec -T db psql -U flower -d flower_shop 2 ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (NOTICE:  table ...exist, skipping:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+DROP TABLE
+Time: 5.928 ms
+NOTICE:  table "customers" does not exist, skipping
+DROP TABLE
+Time: 0.561 ms
+NOTICE:  table "user_events" does not exist, skipping
+DROP TABLE
+Time: 0.481 ms
+=== Part 1: RANGE events by created_at ===
+CREATE TABLE
+Time: 789.248 ms
+CREATE TABLE
+Time: 575.099 ms
+CREATE TABLE
+Time: 380.286 ms
+CREATE TABLE
+Time: 170.050 ms
+INSERT 0 30000
+Time: 639.995 ms
+--- rows per partition ---
+  partition_name   | count 
+-------------------+-------
+ events_2026_09_09 | 10000
+ events_2026_09_10 | 10000
+ events_2026_09_11 | 10000
+(3 rows)
+
+Time: 55.407 ms
+--- boundary probes ---
+INSERT 0 1
+Time: 28.302 ms
+     tableoid      
+-------------------
+ events_2026_09_10
+(1 row)
+
+Time: 7.272 ms
+INSERT 0 1
+Time: 66.981 ms
+     tableoid      
+-------------------
+ events_2026_09_11
+(1 row)
+
+Time: 16.237 ms
+--- insert without partition (expect error) ---
+NOTICE:  Expected error: no partition of relation "events" found for row
+DO
+Time: 127.951 ms
+=== Part 2: partition pruning ===
+                                                                         QUERY PLAN                                                                         
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=150.45..150.46 rows=1 width=8) (actual time=6.828..6.830 rows=1 loops=1)
+   Buffers: shared hit=94
+   ->  Seq Scan on events_2026_09_10 events  (cost=0.00..150.40 rows=19 width=0) (actual time=0.020..5.043 rows=10001 loops=1)
+         Filter: ((created_at >= '2026-09-10 00:00:00'::timestamp without time zone) AND (created_at < '2026-09-11 00:00:00'::timestamp without time zone))
+         Buffers: shared hit=94
+ Planning:
+   Buffers: shared hit=26
+ Planning Time: 0.702 ms
+ Execution Time: 6.873 ms
+(9 rows)
+
+Time: 8.734 ms
+                                                              QUERY PLAN                                                               
+---------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=423.43..423.44 rows=1 width=8) (actual time=23.684..23.687 rows=1 loops=1)
+   Buffers: shared hit=282
+   ->  Append  (cost=0.00..423.29 rows=57 width=0) (actual time=0.027..22.267 rows=7502 loops=1)
+         Buffers: shared hit=282
+         ->  Seq Scan on events_2026_09_09 events_1  (cost=0.00..141.00 rows=19 width=0) (actual time=0.026..3.824 rows=2500 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+         ->  Seq Scan on events_2026_09_10 events_2  (cost=0.00..141.00 rows=19 width=0) (actual time=0.025..12.715 rows=2501 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+         ->  Seq Scan on events_2026_09_11 events_3  (cost=0.00..141.00 rows=19 width=0) (actual time=0.024..4.074 rows=2501 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+ Planning:
+   Buffers: shared hit=8
+ Planning Time: 0.325 ms
+ Execution Time: 23.743 ms
+(20 rows)
+
+Time: 85.654 ms
+=== Part 3: RANGE products by price ===
+CREATE TABLE
+Time: 90.533 ms
+CREATE TABLE
+Time: 120.710 ms
+CREATE TABLE
+Time: 82.149 ms
+CREATE TABLE
+Time: 95.983 ms
+INSERT 0 6
+Time: 28.860 ms
+   partition_name   | id |      name       | price 
+--------------------+----+-----------------+-------
+ products_cheap     |  1 | Rose stem       |    45
+ products_cheap     |  4 | Daisy pack      | 99.99
+ products_medium    |  5 | Orchid          |   100
+ products_medium    |  2 | Tulip bunch     |   180
+ products_expensive |  6 | Luxury set      |  1000
+ products_expensive |  3 | Premium bouquet |  2500
+(6 rows)
+
+Time: 2.463 ms
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Seq Scan on products_medium products  (cost=0.00..22.15 rows=4 width=72) (actual time=0.016..0.020 rows=2 loops=1)
+   Filter: ((price >= '100'::numeric) AND (price < '500'::numeric))
+   Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=19
+ Planning Time: 0.645 ms
+ Execution Time: 0.064 ms
+(7 rows)
+
+Time: 15.825 ms
+=== Part 4???5: LIST customers ===
+CREATE TABLE
+Time: 7.810 ms
+CREATE TABLE
+Time: 61.903 ms
+CREATE TABLE
+Time: 67.304 ms
+CREATE TABLE
+Time: 84.207 ms
+INSERT 0 3
+Time: 13.054 ms
+                                                     QUERY PLAN                                                     
+--------------------------------------------------------------------------------------------------------------------
+ Seq Scan on customers_b2b customers  (cost=0.00..16.88 rows=3 width=118) (actual time=0.017..0.018 rows=1 loops=1)
+   Filter: ((customer_type)::text = 'B2B'::text)
+   Buffers: shared hit=1
+ Planning:
+   Buffers: shared hit=13
+ Planning Time: 0.715 ms
+ Execution Time: 0.037 ms
+(7 rows)
+
+Time: 1.222 ms
+--- VIP without DEFAULT (expect error) ---
+DO
+Time: 0.722 ms
+NOTICE:  Expected error: no partition of relation "customers" found for row
+CREATE TABLE
+Time: 24.910 ms
+INSERT 0 1
+Time: 6.220 ms
+     tableoid      | id  |   name    | customer_type 
+-------------------+-----+-----------+---------------
+ customers_default | 100 | Test User | VIP
+(1 row)
+
+Time: 1.934 ms
+=== Part 6: HASH user_events ===
+CREATE TABLE
+Time: 13.710 ms
+CREATE TABLE
+Time: 12.926 ms
+CREATE TABLE
+Time: 21.828 ms
+CREATE TABLE
+Time: 11.207 ms
+CREATE TABLE
+Time: 7.147 ms
+INSERT 0 200000
+Time: 2001.130 ms (00:02.001)
+ partition_name | count 
+----------------+-------
+ user_events_0  | 50252
+ user_events_1  | 49956
+ user_events_2  | 49942
+ user_events_3  | 49850
+(4 rows)
+
+Time: 187.124 ms
+=== Part 8: indexes on partitioned events ===
+CREATE INDEX
+Time: 102.190 ms
+                                                                      QUERY PLAN                                                                      
+------------------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on events_2026_09_10 events  (cost=4.66..87.26 rows=1 width=174) (actual time=0.203..0.205 rows=0 loops=1)
+   Recheck Cond: (user_id = 12345)
+   Filter: ((created_at >= '2026-09-10 00:00:00'::timestamp without time zone) AND (created_at < '2026-09-11 00:00:00'::timestamp without time zone))
+   Buffers: shared hit=3 read=2
+   ->  Bitmap Index Scan on events_2026_09_10_user_id_idx  (cost=0.00..4.66 rows=50 width=0) (actual time=0.200..0.201 rows=0 loops=1)
+         Index Cond: (user_id = 12345)
+         Buffers: shared hit=3 read=2
+ Planning:
+   Buffers: shared hit=47 read=1
+ Planning Time: 1.215 ms
+ Execution Time: 0.278 ms
+(11 rows)
+
+Time: 2.341 ms
+=== Part 9: filter not on partition key ===
+                                                              QUERY PLAN                                                              
+--------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=658.15..658.16 rows=1 width=8) (actual time=17.668..17.670 rows=1 loops=1)
+   Buffers: shared hit=282
+   ->  Append  (cost=0.00..657.77 rows=150 width=0) (actual time=0.024..16.545 rows=7502 loops=1)
+         Buffers: shared hit=282
+         ->  Seq Scan on events_2026_09_09 events_1  (cost=0.00..219.00 rows=50 width=0) (actual time=0.023..3.274 rows=2500 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+         ->  Seq Scan on events_2026_09_10 events_2  (cost=0.00..219.01 rows=50 width=0) (actual time=0.023..3.292 rows=2501 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+         ->  Seq Scan on events_2026_09_11 events_3  (cost=0.00..219.01 rows=50 width=0) (actual time=0.017..1.751 rows=2501 loops=1)
+               Filter: ((event_type)::text = 'click'::text)
+               Rows Removed by Filter: 7500
+               Buffers: shared hit=94
+ Planning:
+   Buffers: shared hit=42 read=2
+ Planning Time: 1.679 ms
+ Execution Time: 17.716 ms
+(20 rows)
+
+Time: 20.047 ms
+CREATE INDEX
+Time: 123.564 ms
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Aggregate  (cost=262.18..262.19 rows=1 width=8) (actual time=5.649..5.653 rows=1 loops=1)
+   Buffers: shared hit=282 read=12
+   ->  Append  (cost=4.67..261.80 rows=150 width=0) (actual time=0.326..4.630 rows=7502 loops=1)
+         Buffers: shared hit=282 read=12
+         ->  Bitmap Heap Scan on events_2026_09_09 events_1  (cost=4.67..87.02 rows=50 width=0) (actual time=0.325..1.123 rows=2500 loops=1)
+               Recheck Cond: ((event_type)::text = 'click'::text)
+               Heap Blocks: exact=94
+               Buffers: shared hit=94 read=4
+               ->  Bitmap Index Scan on events_2026_09_09_event_type_idx  (cost=0.00..4.66 rows=50 width=0) (actual time=0.275..0.275 rows=2500 loops=1)
+                     Index Cond: ((event_type)::text = 'click'::text)
+                     Buffers: shared read=4
+         ->  Bitmap Heap Scan on events_2026_09_10 events_2  (cost=4.67..87.02 rows=50 width=0) (actual time=0.336..1.160 rows=2501 loops=1)
+               Recheck Cond: ((event_type)::text = 'click'::text)
+               Heap Blocks: exact=94
+               Buffers: shared hit=94 read=4
+               ->  Bitmap Index Scan on events_2026_09_10_event_type_idx  (cost=0.00..4.66 rows=50 width=0) (actual time=0.308..0.308 rows=2501 loops=1)
+                     Index Cond: ((event_type)::text = 'click'::text)
+                     Buffers: shared read=4
+         ->  Bitmap Heap Scan on events_2026_09_11 events_3  (cost=4.67..87.02 rows=50 width=0) (actual time=0.347..1.093 rows=2501 loops=1)
+               Recheck Cond: ((event_type)::text = 'click'::text)
+               Heap Blocks: exact=94
+               Buffers: shared hit=94 read=4
+               ->  Bitmap Index Scan on events_2026_09_11_event_type_idx  (cost=0.00..4.66 rows=50 width=0) (actual time=0.301..0.301 rows=2501 loops=1)
+                     Index Cond: ((event_type)::text = 'click'::text)
+                     Buffers: shared read=4
+ Planning:
+   Buffers: shared hit=84 read=3
+ Planning Time: 2.291 ms
+ Execution Time: 5.995 ms
+(29 rows)
+
+Time: 9.435 ms
+=== Lab 03 parts 1???11 SQL done ===

@@ -1,0 +1,16 @@
+Timing is on.
+=== Lab 03: setup lab_events (daily RANGE) ===
+DROP TABLE
+Time: 74.400 ms
+CREATE TABLE
+Time: 46.234 ms
+DO
+Time: 189.502 ms
+INSERT 0 5000
+Time: 92.413 ms
+       tableoid        | count 
+-----------------------+-------
+ lab_events_2026_09_11 |  5000
+(1 row)
+
+Time: 18.881 ms

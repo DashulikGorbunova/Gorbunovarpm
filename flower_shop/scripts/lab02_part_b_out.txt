@@ -1,0 +1,387 @@
+Pager usage is off.
+=== CURRENT ORDERS ===
+ orders 
+--------
+ 100000
+(1 row)
+
+ customers 
+-----------
+      5000
+(1 row)
+
+DO
+CREATE FUNCTION
+CREATE FUNCTION
+TRUNCATE TABLE
+=== BUILD 100k ===
+ lab02_fill_orders 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+=== SIZE 100k ===
+  rows  | table_size | total_size 
+--------+------------+------------
+ 100000 | 7976 kB    | 25 MB
+(1 row)
+
+=== Q1 FK lookup 100k ===
+                                                                       QUERY PLAN                                                                        
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=2576.36..2648.11 rows=20 width=48) (actual time=109.802..109.877 rows=36 loops=1)
+   Recheck Cond: (customer_id = $0)
+   Heap Blocks: exact=35
+   Buffers: shared hit=1034
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=2571.91..2571.91 rows=1 width=16) (actual time=109.695..109.699 rows=1 loops=1)
+           Buffers: shared hit=997
+           ->  Sort  (cost=2571.91..2584.39 rows=4994 width=16) (actual time=109.693..109.695 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=997
+                 ->  HashAggregate  (cost=2497.00..2546.94 rows=4994 width=16) (actual time=103.907..106.518 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Batches: 1  Memory Usage: 721kB
+                       Buffers: shared hit=997
+                       ->  Seq Scan on shop_order shop_order_1  (cost=0.00..1997.00 rows=100000 width=8) (actual time=0.018..22.932 rows=100000 loops=1)
+                             Buffers: shared hit=997
+   ->  Bitmap Index Scan on shop_order_customer_id_f638df20  (cost=0.00..4.44 rows=20 width=0) (actual time=109.785..109.786 rows=36 loops=1)
+         Index Cond: (customer_id = $0)
+         Buffers: shared hit=999
+ Planning:
+   Buffers: shared hit=30
+ Planning Time: 1.070 ms
+ Execution Time: 110.775 ms
+(24 rows)
+
+=== Q2 date range 100k ===
+                                                             QUERY PLAN                                                             
+------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=43.22..1082.08 rows=1925 width=48) (actual time=0.963..3.293 rows=1915 loops=1)
+   Recheck Cond: (created_at >= (now() - '7 days'::interval))
+   Heap Blocks: exact=870
+   Buffers: shared hit=880
+   ->  Bitmap Index Scan on idx_order_created_at  (cost=0.00..42.73 rows=1925 width=0) (actual time=0.649..0.650 rows=1915 loops=1)
+         Index Cond: (created_at >= (now() - '7 days'::interval))
+         Buffers: shared hit=10
+ Planning:
+   Buffers: shared hit=7
+ Planning Time: 0.469 ms
+ Execution Time: 3.669 ms
+(11 rows)
+
+=== Q3 filter+sort+limit 100k ===
+                                                                        QUERY PLAN                                                                        
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=2648.54..2648.59 rows=20 width=48) (actual time=111.268..111.280 rows=36 loops=1)
+   Buffers: shared hit=1034
+   InitPlan 1 (returns $0)
+     ->  Limit  (cost=2571.91..2571.91 rows=1 width=16) (actual time=111.065..111.071 rows=1 loops=1)
+           Buffers: shared hit=997
+           ->  Sort  (cost=2571.91..2584.39 rows=4994 width=16) (actual time=111.064..111.065 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=997
+                 ->  HashAggregate  (cost=2497.00..2546.94 rows=4994 width=16) (actual time=107.744..109.643 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Batches: 1  Memory Usage: 721kB
+                       Buffers: shared hit=997
+                       ->  Seq Scan on shop_order shop_order_1  (cost=0.00..1997.00 rows=100000 width=8) (actual time=0.009..24.216 rows=100000 loops=1)
+                             Buffers: shared hit=997
+   ->  Sort  (cost=76.63..76.68 rows=20 width=48) (actual time=111.266..111.270 rows=36 loops=1)
+         Sort Key: shop_order.created_at DESC
+         Sort Method: quicksort  Memory: 28kB
+         Buffers: shared hit=1034
+         ->  Bitmap Heap Scan on shop_order  (cost=4.45..76.20 rows=20 width=48) (actual time=111.189..111.240 rows=36 loops=1)
+               Recheck Cond: (customer_id = $0)
+               Heap Blocks: exact=35
+               Buffers: shared hit=1034
+               ->  Bitmap Index Scan on shop_order_customer_id_f638df20  (cost=0.00..4.44 rows=20 width=0) (actual time=111.154..111.154 rows=36 loops=1)
+                     Index Cond: (customer_id = $0)
+                     Buffers: shared hit=999
+ Planning:
+   Buffers: shared hit=5
+ Planning Time: 0.569 ms
+ Execution Time: 112.172 ms
+(30 rows)
+
+=== Q2b status+date 100k ===
+                                                               QUERY PLAN                                                               
+----------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=69.16..1106.62 rows=2023 width=48) (actual time=1.185..3.489 rows=2070 loops=1)
+   Recheck Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+   Heap Blocks: exact=869
+   Buffers: shared hit=881
+   ->  Bitmap Index Scan on idx_order_status_created  (cost=0.00..68.65 rows=2023 width=0) (actual time=0.926..0.926 rows=2070 loops=1)
+         Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+         Buffers: shared hit=12
+ Planning Time: 0.238 ms
+ Execution Time: 3.884 ms
+(9 rows)
+
+=== BUILD to 1M ===
+ lab02_fill_orders 
+-------------------
+ 
+(1 row)
+
+ANALYZE
+=== SIZE 1m ===
+  rows   | table_size | total_size 
+---------+------------+------------
+ 1000000 | 78 MB      | 236 MB
+(1 row)
+
+=== Q1 FK lookup 1m ===
+                                                                                   QUERY PLAN                                                                                   
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=18397.92..19112.06 rows=200 width=48) (actual time=502.830..503.540 rows=253 loops=1)
+   Recheck Cond: (customer_id = $1)
+   Heap Blocks: exact=250
+   Buffers: shared hit=9265 read=954
+   InitPlan 1 (returns $1)
+     ->  Limit  (cost=18391.94..18391.94 rows=1 width=16) (actual time=502.512..502.629 rows=1 loops=1)
+           Buffers: shared hit=9034 read=932
+           ->  Sort  (cost=18391.94..18404.45 rows=5004 width=16) (actual time=502.509..502.626 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=9034 read=932
+                 ->  Finalize HashAggregate  (cost=18316.88..18366.92 rows=5004 width=16) (actual time=499.497..501.248 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Batches: 1  Memory Usage: 721kB
+                       Buffers: shared hit=9034 read=932
+                       ->  Gather  (cost=17216.00..18266.84 rows=10008 width=16) (actual time=473.837..480.581 rows=15000 loops=1)
+                             Workers Planned: 2
+                             Workers Launched: 2
+                             Buffers: shared hit=9034 read=932
+                             ->  Partial HashAggregate  (cost=16216.00..16266.04 rows=5004 width=16) (actual time=451.533..453.998 rows=5000 loops=3)
+                                   Group Key: shop_order_1.customer_id
+                                   Batches: 1  Memory Usage: 721kB
+                                   Buffers: shared hit=9034 read=932
+                                   Worker 0:  Batches: 1  Memory Usage: 721kB
+                                   Worker 1:  Batches: 1  Memory Usage: 721kB
+                                   ->  Parallel Seq Scan on shop_order shop_order_1  (cost=0.00..14132.67 rows=416667 width=8) (actual time=0.041..128.852 rows=333333 loops=3)
+                                         Buffers: shared hit=9034 read=932
+   ->  Bitmap Index Scan on shop_order_customer_id_f638df20  (cost=0.00..5.92 rows=200 width=0) (actual time=502.742..502.743 rows=253 loops=1)
+         Index Cond: (customer_id = $1)
+         Buffers: shared hit=9037 read=932
+ Planning:
+   Buffers: shared hit=12
+ Planning Time: 4.844 ms
+ Execution Time: 505.001 ms
+(34 rows)
+
+=== Q2 date range 1m ===
+                                                               QUERY PLAN                                                                
+-----------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=438.36..10866.30 rows=18830 width=48) (actual time=24.305..47.766 rows=19068 loops=1)
+   Recheck Cond: (created_at >= (now() - '7 days'::interval))
+   Heap Blocks: exact=8532
+   Buffers: shared hit=7862 read=742
+   ->  Bitmap Index Scan on idx_order_created_at  (cost=0.00..433.66 rows=18830 width=0) (actual time=19.799..19.799 rows=19068 loops=1)
+         Index Cond: (created_at >= (now() - '7 days'::interval))
+         Buffers: shared hit=41 read=31
+ Planning:
+   Buffers: shared hit=4 read=1
+ Planning Time: 0.489 ms
+ Execution Time: 49.650 ms
+(11 rows)
+
+=== Q3 filter+sort+limit 1m ===
+                                                                                   QUERY PLAN                                                                                   
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=18392.37..18594.24 rows=50 width=48) (actual time=483.256..483.450 rows=50 loops=1)
+   Buffers: shared hit=9916 read=103
+   InitPlan 1 (returns $1)
+     ->  Limit  (cost=18391.94..18391.94 rows=1 width=16) (actual time=483.186..483.315 rows=1 loops=1)
+           Buffers: shared hit=9863 read=103
+           ->  Sort  (cost=18391.94..18404.45 rows=5004 width=16) (actual time=483.184..483.313 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=9863 read=103
+                 ->  Finalize HashAggregate  (cost=18316.88..18366.92 rows=5004 width=16) (actual time=480.875..482.215 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Batches: 1  Memory Usage: 721kB
+                       Buffers: shared hit=9863 read=103
+                       ->  Gather  (cost=17216.00..18266.84 rows=10008 width=16) (actual time=454.292..461.449 rows=15000 loops=1)
+                             Workers Planned: 2
+                             Workers Launched: 2
+                             Buffers: shared hit=9863 read=103
+                             ->  Partial HashAggregate  (cost=16216.00..16266.04 rows=5004 width=16) (actual time=441.627..444.278 rows=5000 loops=3)
+                                   Group Key: shop_order_1.customer_id
+                                   Batches: 1  Memory Usage: 721kB
+                                   Buffers: shared hit=9863 read=103
+                                   Worker 0:  Batches: 1  Memory Usage: 721kB
+                                   Worker 1:  Batches: 1  Memory Usage: 721kB
+                                   ->  Parallel Seq Scan on shop_order shop_order_1  (cost=0.00..14132.67 rows=416667 width=8) (actual time=0.032..124.562 rows=333333 loops=3)
+                                         Buffers: shared hit=9863 read=103
+   ->  Index Scan using idx_order_cust_created_desc on shop_order  (cost=0.42..807.92 rows=200 width=48) (actual time=483.254..483.312 rows=50 loops=1)
+         Index Cond: (customer_id = $1)
+         Buffers: shared hit=9916 read=103
+ Planning Time: 0.360 ms
+ Execution Time: 484.607 ms
+(30 rows)
+
+=== Q2b status+date 1m ===
+                                                                 QUERY PLAN                                                                  
+---------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=710.60..11102.30 rows=21285 width=48) (actual time=27.963..45.599 rows=20487 loops=1)
+   Recheck Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+   Heap Blocks: exact=8662
+   Buffers: shared hit=8674 read=98
+   ->  Bitmap Index Scan on idx_order_status_created  (cost=0.00..705.28 rows=21285 width=0) (actual time=25.291..25.292 rows=20487 loops=1)
+         Index Cond: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+         Buffers: shared hit=18 read=92
+ Planning Time: 0.273 ms
+ Execution Time: 47.464 ms
+(9 rows)
+
+=== BUILD to 5M ===
+docker : ERROR:  canceling statement due to user request
+C:\Users\user\AppData\Local\Temp\ps-script-4f56643f-6d4b-412c-b4da-426356f92ae3.ps1:78 знак:49
++ ... rt_b.sql" | docker compose exec -T db psql -U flower -d flower_shop > ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ERROR:  canceli...to user request:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+CONTEXT:  SQL statement "SELECT 1 FROM ONLY "public"."shop_customer" x WHERE "id" OPERATOR(pg_catalog.=) $1 FOR KEY SHA
+RE OF x"
+ANALYZE
+=== SIZE 5m ===
+  rows   | table_size | total_size 
+---------+------------+------------
+ 1000000 | 389 MB     | 536 MB
+(1 row)
+
+=== Q1 FK lookup 5m ===
+                                                                                      QUERY PLAN                                                                                      
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on shop_order  (cost=58768.16..59536.38 rows=201 width=48) (actual time=1292.140..1334.879 rows=253 loops=1)
+   Recheck Cond: (customer_id = $1)
+   Heap Blocks: exact=1004
+   Buffers: shared hit=15205 read=35645
+   InitPlan 1 (returns $1)
+     ->  Limit  (cost=58758.18..58758.18 rows=1 width=16) (actual time=1288.400..1305.409 rows=1 loops=1)
+           Buffers: shared hit=14912 read=34931
+           ->  Sort  (cost=58758.18..58770.68 rows=5001 width=16) (actual time=1288.398..1305.405 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=14912 read=34931
+                 ->  Finalize GroupAggregate  (cost=57466.17..58733.17 rows=5001 width=16) (actual time=1250.728..1298.871 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Buffers: shared hit=14912 read=34931
+                       ->  Gather Merge  (cost=57466.17..58633.15 rows=10002 width=16) (actual time=1250.705..1283.057 rows=15000 loops=1)
+                             Workers Planned: 2
+                             Workers Launched: 2
+                             Buffers: shared hit=14912 read=34931
+                             ->  Sort  (cost=56466.15..56478.65 rows=5001 width=16) (actual time=1131.748..1133.576 rows=5000 loops=3)
+                                   Sort Key: shop_order_1.customer_id
+                                   Sort Method: quicksort  Memory: 388kB
+                                   Buffers: shared hit=14912 read=34931
+                                   Worker 0:  Sort Method: quicksort  Memory: 388kB
+                                   Worker 1:  Sort Method: quicksort  Memory: 388kB
+                                   ->  Partial HashAggregate  (cost=56108.88..56158.89 rows=5001 width=16) (actual time=1107.920..1113.993 rows=5000 loops=3)
+                                         Group Key: shop_order_1.customer_id
+                                         Batches: 1  Memory Usage: 721kB
+                                         Buffers: shared hit=14896 read=34931
+                                         Worker 0:  Batches: 1  Memory Usage: 721kB
+                                         Worker 1:  Batches: 1  Memory Usage: 721kB
+                                         ->  Parallel Seq Scan on shop_order shop_order_1  (cost=0.00..54014.92 rows=418792 width=8) (actual time=0.067..479.972 rows=333333 loops=3)
+                                               Buffers: shared hit=14896 read=34931
+   ->  Bitmap Index Scan on shop_order_customer_id_f638df20  (cost=0.00..9.93 rows=201 width=0) (actual time=1291.487..1291.487 rows=1012 loops=1)
+         Index Cond: (customer_id = $1)
+         Buffers: shared hit=7643 read=11378
+ Planning:
+   Buffers: shared hit=18
+ Planning Time: 4.376 ms
+ Execution Time: 1341.992 ms
+(39 rows)
+
+=== Q2 date range 5m ===
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..59994.85 rows=18390 width=48) (actual time=0.667..1093.996 rows=19047 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=15705 read=34122
+   ->  Parallel Seq Scan on shop_order  (cost=0.00..57155.85 rows=7662 width=48) (actual time=0.106..938.501 rows=6349 loops=3)
+         Filter: (created_at >= (now() - '7 days'::interval))
+         Rows Removed by Filter: 326984
+         Buffers: shared hit=15705 read=34122
+ Planning Time: 3.872 ms
+ Execution Time: 1124.296 ms
+(10 rows)
+
+=== Q3 filter+sort+limit 5m ===
+                                                                                      QUERY PLAN                                                                                      
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Limit  (cost=59543.05..59543.18 rows=50 width=48) (actual time=1324.019..1348.034 rows=50 loops=1)
+   Buffers: shared hit=16811 read=34039
+   InitPlan 1 (returns $1)
+     ->  Limit  (cost=58758.18..58758.18 rows=1 width=16) (actual time=1303.132..1327.126 rows=1 loops=1)
+           Buffers: shared hit=15809 read=34034
+           ->  Sort  (cost=58758.18..58770.68 rows=5001 width=16) (actual time=1303.129..1327.122 rows=1 loops=1)
+                 Sort Key: (count(*)) DESC
+                 Sort Method: top-N heapsort  Memory: 25kB
+                 Buffers: shared hit=15809 read=34034
+                 ->  Finalize GroupAggregate  (cost=57466.17..58733.17 rows=5001 width=16) (actual time=1267.612..1321.397 rows=5000 loops=1)
+                       Group Key: shop_order_1.customer_id
+                       Buffers: shared hit=15809 read=34034
+                       ->  Gather Merge  (cost=57466.17..58633.15 rows=10002 width=16) (actual time=1267.587..1307.389 rows=15000 loops=1)
+                             Workers Planned: 2
+                             Workers Launched: 2
+                             Buffers: shared hit=15809 read=34034
+                             ->  Sort  (cost=56466.15..56478.65 rows=5001 width=16) (actual time=1165.140..1167.040 rows=5000 loops=3)
+                                   Sort Key: shop_order_1.customer_id
+                                   Sort Method: quicksort  Memory: 388kB
+                                   Buffers: shared hit=15809 read=34034
+                                   Worker 0:  Sort Method: quicksort  Memory: 388kB
+                                   Worker 1:  Sort Method: quicksort  Memory: 388kB
+                                   ->  Partial HashAggregate  (cost=56108.88..56158.89 rows=5001 width=16) (actual time=1154.977..1160.219 rows=5000 loops=3)
+                                         Group Key: shop_order_1.customer_id
+                                         Batches: 1  Memory Usage: 721kB
+                                         Buffers: shared hit=15793 read=34034
+                                         Worker 0:  Batches: 1  Memory Usage: 721kB
+                                         Worker 1:  Batches: 1  Memory Usage: 721kB
+                                         ->  Parallel Seq Scan on shop_order shop_order_1  (cost=0.00..54014.92 rows=418792 width=8) (actual time=0.104..520.703 rows=333333 loops=3)
+                                               Buffers: shared hit=15793 read=34034
+   ->  Sort  (cost=784.87..785.38 rows=201 width=48) (actual time=1324.016..1324.027 rows=50 loops=1)
+         Sort Key: shop_order.created_at DESC
+         Sort Method: top-N heapsort  Memory: 34kB
+         Buffers: shared hit=8206 read=12393
+         ->  Bitmap Heap Scan on shop_order  (cost=9.98..778.20 rows=201 width=48) (actual time=1315.108..1317.316 rows=253 loops=1)
+               Recheck Cond: (customer_id = $1)
+               Heap Blocks: exact=1004
+               Buffers: shared hit=8206 read=12393
+               ->  Bitmap Index Scan on shop_order_customer_id_f638df20  (cost=0.00..9.93 rows=201 width=0) (actual time=1304.508..1304.509 rows=1012 loops=1)
+                     Index Cond: (customer_id = $1)
+                     Buffers: shared hit=7206 read=12389
+ Planning Time: 0.502 ms
+ Execution Time: 1349.139 ms
+(43 rows)
+
+=== Q2b status+date 5m (bottleneck candidate) ===
+                                                           QUERY PLAN                                                           
+--------------------------------------------------------------------------------------------------------------------------------
+ Gather  (cost=1000.00..61275.73 rows=20729 width=48) (actual time=0.664..858.983 rows=20481 loops=1)
+   Workers Planned: 2
+   Workers Launched: 2
+   Buffers: shared hit=15879 read=33948
+   ->  Parallel Seq Scan on shop_order  (cost=0.00..58202.83 rows=8637 width=48) (actual time=0.102..697.476 rows=6827 loops=3)
+         Filter: (((status)::text = 'PAID'::text) AND (created_at >= (now() - '30 days'::interval)))
+         Rows Removed by Filter: 326506
+         Buffers: shared hit=15879 read=33948
+ Planning Time: 7.702 ms
+ Execution Time: 874.900 ms
+(10 rows)
+
+=== INDEX SIZES shop_order 5m ===
+          indexrelname           | index_size 
+---------------------------------+------------
+ shop_order_pkey                 | 107 MB
+ shop_order_customer_id_f638df20 | 39 MB
+(2 rows)
+
+=== DONE PART B ===

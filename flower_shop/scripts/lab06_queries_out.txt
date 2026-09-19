@@ -1,0 +1,47 @@
+=== Lab 06: запросы после шардирования ===
+Router: strategy=consistent shards=3 vnodes=160 ring_points=480
+Где объединяются результаты: backend (application layer)
+
+--- 2. Single-shard query ---
+WHERE customer_id = 1  ->  shard: shard2
+Затронуто шардов: 1 (остальные не читаются)
+Время: 37.293 ms, строк: 10
+
+--- 3. Распределённая агрегация ---
+COUNT(*) по шардам: [{'alias': 'shard0', 'ok': True, 'elapsed_ms': 35.846, 'data': [{'value': 33350}], 'error': None}, {'alias': 'shard1', 'ok': True, 'elapsed_ms': 34.002, 'data': [{'value': 33766}], 'error': None}, {'alias': 'shard2', 'ok': True, 'elapsed_ms': 7.236, 'data': [{'value': 32884}], 'error': None}]
+  merged COUNT(*) = 100000
+SUM(total_amount) по шардам: [{'alias': 'shard0', 'ok': True, 'elapsed_ms': 11.771, 'data': [{'value': Decimal('166383936.28')}], 'error': None}, {'alias': 'shard1', 'ok': True, 'elapsed_ms': 10.934, 'data': [{'value': Decimal('168182937.46')}], 'error': None}, {'alias': 'shard2', 'ok': True, 'elapsed_ms': 12.705, 'data': [{'value': Decimal('164758736.32')}], 'error': None}]
+  merged SUM = 499325610.06
+GROUP BY status по шардам: [{'alias': 'shard0', 'ok': True, 'elapsed_ms': 23.152, 'data': [{'status': 'PROCESSING', 'value': 8296}, {'status': 'CANCELLED', 'value': 4237}, {'status': 'DELIVERED', 'value': 8465}, {'status': 'NEW', 'value': 4131}, {'status': 'PAID', 'value': 8221}], 'error': None}, {'alias': 'shard1', 'ok': True, 'elapsed_ms': 29.886, 'data': [{'status': 'CANCELLED', 'value': 4241}, {'status': 'PROCESSING', 'value': 8587}, {'status': 'DELIVERED', 'value': 8385}, {'status': 'NEW', 'value': 4240}, {'status': 'PAID', 'value': 8313}], 'error': None}, {'alias': 'shard2', 'ok': True, 'elapsed_ms': 31.58, 'data': [{'status': 'CANCELLED', 'value': 4137}, {'status': 'PROCESSING', 'value': 8142}, {'status': 'DELIVERED', 'value': 8220}, {'status': 'PAID', 'value': 8175}, {'status': 'NEW', 'value': 4210}], 'error': None}]
+  merged groups = {'CANCELLED': 12615, 'DELIVERED': 25070, 'NEW': 12581, 'PAID': 24709, 'PROCESSING': 25025}
+  суммарно по шардам: 77.084 ms, максимум на шарде: 35.846 ms
+
+--- 5. ORDER BY + LIMIT 20 ---
+  shard0: top-1 id = 7403304 (33.015 ms)
+  shard1: top-1 id = 7913212 (16.027 ms)
+  shard2: top-1 id = 9000003 (14.432 ms)
+  merged top-20: первые id = [9000003, 9000002, 9000001, 7913212, 7403304]
+  max на шарде: 33.015 ms, суммарно: 63.473 ms
+
+--- 4. Cross-shard JOIN ---
+Заказы: shard2 (0.62 ms), клиент: default (Primary) (15.19 ms)
+  shop_customer на shard0: relation "shop_customer" does not exist
+  shop_customer на shard1: relation "shop_customer" does not exist
+  shop_customer на shard2: relation "shop_customer" does not exist
+  join выполнен в backend, строк: 5
+
+--- 7. Hot shard simulation ---
+Запросов: 10000 (из них 9000 — к популярным клиентам)
+Доля строк по шардам:    {'shard0': 33.35, 'shard1': 33.77, 'shard2': 32.88}
+Доля запросов по шардам: {'shard0': 40.09, 'shard1': 21.32, 'shard2': 38.59}
+Вердикт: hot shard
+
+Single-shard запросы:
+  + GET /api/shards/route/?customer_id=?  -> WHERE customer_id = ?
+  + GET /api/customers/{id}/orders/       -> WHERE customer_id = ?
+  + GET /api/orders/?customer=?           -> WHERE customer_id = ?
+Distributed запросы:
+  - COUNT(*) / SUM() / GROUP BY по всем заказам
+  - ORDER BY created_at DESC LIMIT n (глобальный топ)
+  - JOIN заказов (шарды) с клиентами (Primary)
+  - GET /api/orders/ (список без фильтра по клиенту)
